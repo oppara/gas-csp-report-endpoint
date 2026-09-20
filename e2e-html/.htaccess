@@ -1,0 +1,6 @@
+# CSP検証用ヘッダー設定サンプル。
+# https://script.google.com/macros/s/xxxxx/exec は実際のデプロイURLに差し替える。
+<IfModule mod_headers.c>
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self'; report-uri https://script.google.com/macros/s/xxxxx/exec; report-to csp-endpoint"
+    Header set Reporting-Endpoints 'csp-endpoint="https://script.google.com/macros/s/xxxxx/exec"'
+</IfModule>

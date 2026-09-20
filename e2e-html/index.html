@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>CSP report-uri / report-to 検証</title>
+</head>
+<body>
+<h1>CSP report-uri / report-to 検証ページ</h1>
+
+<p>
+  <code>report-uri</code>・<code>report-to</code>ともに<code>&lt;meta&gt;</code>タグ経由のCSPでは
+  仕様上無視される。このHTMLを配信するサーバー側でレスポンスヘッダーを付けること。
+</p>
+
+<h2>ヘッダー設定(report-uri + report-to を併用)</h2>
+<p>
+  <code>report-to</code>は2026年にBaseline入りし、Chrome/Edge/Firefox/Safariの最新版で対応済み。
+  ただし旧バージョンのブラウザ向けフォールバックとして<code>report-uri</code>も併記するのが定石。
+  両方指定した場合、<code>report-to</code>に対応しているブラウザはそちらを優先して使う。
+</p>
+<pre>Content-Security-Policy: default-src 'self'; script-src 'self'; report-uri https://script.google.com/macros/s/xxxxx/exec; report-to csp-endpoint
+Reporting-Endpoints: csp-endpoint="https://script.google.com/macros/s/xxxxx/exec"</pre>
+
+<p>
+  <code>report-to</code>(Reporting API)対応ブラウザは
+  <code>Content-Type: application/reports+json</code>で
+  <code>[{"type": "csp-violation", "body": {"documentURL": ..., "blockedURL": ..., "effectiveDirective": ...}, ...}]</code>
+  という配列形式・別フィールド名でレポートを送る(1回のPOSTに複数件バッチされる場合がある)。
+  <code>report-uri</code>の<code>{"csp-report": {...}}</code>形式とはペイロード構造が異なるが、
+  GAS側(<code>parseRequestBody</code>)は両方の形式に対応済みで、
+  <code>report-to</code>バッチ内の各レポートもそれぞれ独立した違反として記録・通知する。
+</p>
+
+<p><code>https://script.google.com/macros/s/xxxxx/exec</code>は実際のデプロイURLに差し替える。</p>
+
+<h2>違反トリガー</h2>
+<p>
+  下のインラインスクリプトと外部画像はCSPでブロックされる想定。
+  ブロックされれば違反レポートが上記URLに送信される。
+</p>
+
+<script>document.write('<p style="color:red">CSPが効いていない(このスクリプトが実行された)</p>');</script>
+<img src="https://evil-example.invalid/tracker.png" alt="拒否されるべき外部画像(default-srcでブロックされる想定)">
+
+<h2>確認方法</h2>
+<ol>
+  <li>ブラウザの開発者ツール(Network/Console)で、上記エンドポイントへのPOSTが発生することを確認する。</li>
+  <li>GASのスプレッドシートで<code>violation_log</code>(許可ドメインの場合)または
+    <code>request_log</code>への記録とSlack通知を確認する。</li>
+</ol>
+</body>
+</html>
